@@ -46,7 +46,7 @@ CUSTOM_MODS = []
 $LOAD_PATH << '.'
 require 'Core'
 require 'Stats'
-mod_array = ['ReadComicOnline']
+mod_array = ['ComicOnlineFree']
 # mod_array = ['ComicCastle', 'ReadComicOnline', 'ReadComics']
 mod_array.each do |mod|
   require mod
@@ -93,7 +93,7 @@ def get_title_data(args)
   CUSTOM_MODS.each do |m|
     mod = Kernel.const_get(m)
     puts "Updating for module: #{mod}"
-    title_data = mod.scrape_title_data
+    title_data = mod.scrape_title_data(args)
     update_title_data(title_data)
   end
   puts "Updating titles complete."
