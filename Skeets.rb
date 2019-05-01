@@ -59,7 +59,7 @@ end
 SETTINGS = {
   savedirno: '/home/serabyte/Minerva/',
   savedir: '/home/serabyte/Minerva/',
-  comicDirName: 'Comics2',
+  comicDirName: 'Comics',
   mangaDirName: 'Manga',
   scrape_pages: 50,
   max_downloads: 10,
@@ -73,9 +73,17 @@ class ImageWorker
   include Celluloid
 
   def process_page(item)
+    puts item[1]
       # puts "Inside ImageWorker: #{item}"
-      title_data = SETTINGS[:db].execute('select module, name from MediaTitles where media_id = ?', [item[1]])
-      mod = Kernel.const_get(title_data[0][0].to_s)
+      title_data = SETTINGS[:db].execute('select name from MediaTitles where module = ? and media_id = ?', ['ComicOnlineFree', item[1]])
+      puts "+++++"
+      puts title_data
+      puts "+++++"
+      mod = Kernel.const_get('ComicOnlineFree') #TODO: getting messy:::    title_data[0][0].to_s)
+      puts title_data
+      puts "---"
+      puts title_data[0]
+      puts "---"
       this_title = title_data[0][1].to_s
       image_data = mod.scrape_image_data(item[1], item[2], item[0], this_title) # note: Will add title later or remove.
       # puts "Looking up image data for #{title_data[0][1].to_s}"
@@ -93,7 +101,7 @@ def get_title_data(args)
   CUSTOM_MODS.each do |m|
     mod = Kernel.const_get(m)
     puts "Updating for module: #{mod}"
-    title_data = mod.scrape_title_data(args)
+    title_data = mod.scrape_title_data(args[1])
     update_title_data(title_data)
   end
   puts "Updating titles complete."
@@ -151,7 +159,7 @@ end
 def get_image_data(limit)
     # look up issues
     image_pool = ImageWorker.pool(size: 10)
-    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 LIMIT ?', [limit])
+    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 and issue_url LIKE ? LIMIT ?', ['%comiconlinefree%', limit])
     # got issues, iterate and get image data
     data.each do |item|
       # lookup comic title for title and module info.
@@ -393,7 +401,7 @@ when 'updateimages'
     get_image_data(args[1])
   end
 when 'downloadimages'
-  download_images(10, nil, nil) # TODO: put this back to 1000 or whatever
+  download_images(100, nil, nil) # TODO: put this back to 1000 or whatever
 when 'downloadissue'
   if args[1].nil? || args[2].nil?
     puts "Need to specify comic title and issue number. Example Skeets.rb 31 3"

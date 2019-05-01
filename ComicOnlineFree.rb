@@ -13,7 +13,7 @@ module ComicOnlineFree
 		current_page = 1
 		media_list = []
   		# iterate over pages
-	  while current_page <= limit #TODO: change to 50, also need time out
+	  while current_page <= limit.to_i #TODO: change to 50, also need time out
 	    current_url = "#{BASE_URL}/comic-updates/#{current_page}"
 			page = HTTParty.get(current_url)
 			parse_page = Nokogiri::HTML(page)
@@ -22,7 +22,7 @@ module ComicOnlineFree
 			title_url = link.attr('href')
 			title = link.text
 			media_data = Hash.new {|h,k| h[k] = [] }
-	        media_data[:title] = title_url
+	        media_data[:title] = title
 	        media_data[:source] = BASE_URL
 	        media_data[:url] = title_url
 	        media_data[:module] = MODULE_CODE
@@ -57,6 +57,33 @@ module ComicOnlineFree
 		end
 		return media_list
 	end
+
+
+	def self.scrape_image_data(title_id, url, issue_id, title)
+		media_list = []
+		i_id = url.match(/(Issue+)(.*\?)/)
+    issue_name = i_id.to_s.sub('Issue-', '').sub('?','')
+		puts "Working on images for #{issue_id}"
+		page = HTTParty.get(url + '/full') # this site puts images on pages, but /full url puts them all on 1 page
+		parse_page = Nokogiri::HTML(page)
+		switch_css = '.chapter_img'
+		parse_page.css(switch_css).map do |link|
+			image_url = link.attr('src')
+			puts image_url
+      image_updated_url = image_url + "?&&#{title}&&&#{issue_name}&&&&"
+			media_data = Hash.new {|h,k| h[k] = [] }
+				media_data[:source] = BASE_URL
+				media_data[:url] = image_updated_url
+				media_data[:module] = MODULE_CODE
+				media_data[:title_id] = title_id
+				media_data[:issue_id] = issue_id
+				media_data[:issue_title] = issue_name
+				media_list.push(media_data)
+    end
+		return media_list
+	end
+
+
 
 
 end
