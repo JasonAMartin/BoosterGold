@@ -9,15 +9,17 @@
 #
 # Data building examples (general flow: comics > issues > images):
 #
-# $ ruby Skeets.rb getcomics
+# $ ruby Skeets.rb updatetitles
 #
-# $ ruby Skeets.rb getissues
+# $ ruby Skeets.rb updateissues
 #
-# $ ruby Skeets.rb getimages
+# $ ruby Skeets.rb updateimages
+#
+# $ ruby Skeets.rb downloadimages
 #
 # Setup:
 #
-# 1. Put this script and the BoosterGold.db file in the same directory.
+# 1. Alter path to the DB.
 #
 # 2. Make sure you have all the required gems ($ gem install <whatever>).
 #
@@ -37,13 +39,15 @@ require 'open-uri'
 require 'typhoeus' #
 require 'fileutils'
 require 'celluloid/current'
+require "selenium-webdriver"
 
 # Load custom modules
 CUSTOM_MODS = []
 $LOAD_PATH << '.'
 require 'Core'
 require 'Stats'
-mod_array = ['ComicCastle', 'ReadComicOnline', 'ReadComics']
+mod_array = ['ReadComicOnline']
+# mod_array = ['ComicCastle', 'ReadComicOnline', 'ReadComics']
 mod_array.each do |mod|
   require mod
   CUSTOM_MODS.push(mod)
@@ -53,14 +57,14 @@ end
 # SETTINGS
 
 SETTINGS = {
-  savedirno: '/home/devstack/JAMDEV/',
-  savedir: '/home/devstack/JAMDATA/Media/',
-  comicDirName: 'Comics',
+  savedirno: '/home/serabyte/Minerva/',
+  savedir: '/home/serabyte/Minerva/',
+  comicDirName: 'Comics2',
   mangaDirName: 'Manga',
   scrape_pages: 50,
   max_downloads: 10,
   minimum_image_threshold: 6,
-  db: SQLite3::Database.new('BoosterGold.db')
+  db: SQLite3::Database.new('../BoosterGoldDatabase/BoosterGold.db')
 }.freeze
 
 # STARTING NEW MODULE CODE
@@ -114,13 +118,13 @@ def update_title_data(data)
   end
 end
 
-def get_issue_data(args)
+def get_issue_data(limit)
   this_day = Time.now.strftime('%d/%m/%Y')
   CUSTOM_MODS.each do |m|
     mod = Kernel.const_get(m)
     puts "Updating for module: #{mod}"
     # look up titles
-    data = SETTINGS[:db].execute('select media_id, name, last_checked, title_url from MediaTitles where module=? and (last_checked<>? or last_checked is null)', [m, this_day])
+    data = SETTINGS[:db].execute('select media_id, name, last_checked, title_url from MediaTitles where module=? and (is_disabled<>? and (last_checked<>? or last_checked is null)) LIMIT ?', [m, '1', this_day, limit])
     data.each do |item|
       if this_day != item[2]
         issue_data = mod.scrape_issue_data(item[1], item[0], item[3])
@@ -144,10 +148,10 @@ def update_issue_data(data)
   end
 end
 
-def get_image_data(args)
+def get_image_data(limit)
     # look up issues
     image_pool = ImageWorker.pool(size: 10)
-    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0')
+    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 LIMIT ?', [limit])
     # got issues, iterate and get image data
     data.each do |item|
       # lookup comic title for title and module info.
@@ -281,9 +285,9 @@ def download_images(image_count, title, issue)
         current_issue = i_title[0][0].to_s
         final_url = adjusted_url.to_s
           if !final_url.empty?
-              # check to see if the directory and file for the image is there. 
+              # check to see if the directory and file for the image is there.
               folder_data = SETTINGS[:db].execute('select folder_key, pretty_name from FolderKeys where folder_key=?', [this_comic])
-              title_directory = folder_data[0][1]      
+              title_directory = folder_data[0][1]
               fileLOC = "#{SETTINGS[:savedir]}#{media_location}/#{title_directory}/#{current_issue}"
               current_image = final_url.match(/[\w:]+\.(jpe?g|png|gif)/).to_s
               image_name = "#{this_comic}-#{current_issue}-#{current_image}"
@@ -295,7 +299,7 @@ def download_images(image_count, title, issue)
                 request.on_complete do |response|
                     puts "response received: #{final_url}."
                     current_image = "404"
-                    # 2. check if comic + issue folder exists. If not, make it. 
+                    # 2. check if comic + issue folder exists. If not, make it.
                     FileUtils::mkdir_p "#{SETTINGS[:savedir]}#{media_location}/#{title_directory}/#{current_issue}"
                     # 3. get the image and save into the directory.
                     File.write("#{SETTINGS[:savedir]}#{media_location}/#{title_directory}/#{current_issue}/#{image_name}", response.body)
@@ -377,11 +381,19 @@ case args[0]
 when 'updatetitles'
   get_title_data(args)
 when 'updateissues'
-  get_issue_data(args)
+  if args[1].nil?
+    get_issue_data(10)
+  else
+    get_issue_data(args[1])
+  end
 when 'updateimages'
-  get_image_data(args)
+  if args[1].nil?
+    get_image_data(3)
+  else
+    get_image_data(args[1])
+  end
 when 'downloadimages'
-  download_images(10000, nil, nil)
+  download_images(10, nil, nil) # TODO: put this back to 1000 or whatever
 when 'downloadissue'
   if args[1].nil? || args[2].nil?
     puts "Need to specify comic title and issue number. Example Skeets.rb 31 3"
