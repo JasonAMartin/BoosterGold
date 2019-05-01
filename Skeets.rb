@@ -159,7 +159,7 @@ end
 def get_image_data(limit)
     # look up issues
     image_pool = ImageWorker.pool(size: 10)
-    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 and issue_url LIKE ? LIMIT ?', ['%comiconlinefree%', limit])
+    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 and issue_url LIKE ? LIMIT ?', ['%comiconlinefree%', limit.to_i])
     # got issues, iterate and get image data
     data.each do |item|
       # lookup comic title for title and module info.
@@ -396,7 +396,7 @@ when 'updateissues'
   end
 when 'updateimages'
   if args[1].nil?
-    get_image_data(3)
+    get_image_data(10)
   else
     get_image_data(args[1])
   end
