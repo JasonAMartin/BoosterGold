@@ -46,7 +46,7 @@ CUSTOM_MODS = []
 $LOAD_PATH << '.'
 require 'Core'
 require 'Stats'
-mod_array = ['ComicOnlineFree']
+mod_array = ['ComicOnlineFree', 'ComicPunchNet']
 # mod_array = ['ComicCastle', 'ReadComicOnline', 'ReadComics']
 mod_array.each do |mod|
   require mod
@@ -75,15 +75,8 @@ class ImageWorker
   def process_page(item)
     puts item[1]
       # puts "Inside ImageWorker: #{item}"
-      title_data = SETTINGS[:db].execute('select name from MediaTitles where module = ? and media_id = ?', ['ComicOnlineFree', item[1]])
-      puts "+++++"
-      puts title_data
-      puts "+++++"
-      mod = Kernel.const_get('ComicOnlineFree') #TODO: getting messy:::    title_data[0][0].to_s)
-      puts title_data
-      puts "---"
-      puts title_data[0]
-      puts "---"
+      title_data = SETTINGS[:db].execute('select name from MediaTitles where media_id = ?', [item[1]])
+      mod = Kernel.const_get(title_data[0][0].to_s) # TODO: If a module is in DB, but now disabled, this will break!
       this_title = title_data[0][1].to_s
       image_data = mod.scrape_image_data(item[1], item[2], item[0], this_title) # note: Will add title later or remove.
       # puts "Looking up image data for #{title_data[0][1].to_s}"
@@ -100,9 +93,11 @@ end
 def get_title_data(args)
   CUSTOM_MODS.each do |m|
     mod = Kernel.const_get(m)
-    puts "Updating for module: #{mod}"
-    title_data = mod.scrape_title_data(args[1])
-    update_title_data(title_data)
+    if not mod.is_feeder
+      puts "Updating for module: #{mod}"
+      title_data = mod.scrape_title_data(args[1])
+      update_title_data(title_data)
+    end
   end
   puts "Updating titles complete."
 end
@@ -130,16 +125,18 @@ def get_issue_data(limit)
   this_day = Time.now.strftime('%d/%m/%Y')
   CUSTOM_MODS.each do |m|
     mod = Kernel.const_get(m)
-    puts "Updating for module: #{mod}"
-    # look up titles
-    data = SETTINGS[:db].execute('select media_id, name, last_checked, title_url from MediaTitles where module=? and (is_disabled<>? and (last_checked<>? or last_checked is null)) LIMIT ?', [m, '1', this_day, limit])
-    data.each do |item|
-      if this_day != item[2]
-        issue_data = mod.scrape_issue_data(item[1], item[0], item[3])
-        update_issue_data(issue_data)
+    if not mod.is_feeder
+      puts "Updating for module: #{mod}"
+      # look up titles
+      data = SETTINGS[:db].execute('select media_id, name, last_checked, title_url from MediaTitles where module=? and (is_disabled<>? and (last_checked<>? or last_checked is null)) LIMIT ?', [m, '1', this_day, limit])
+      data.each do |item|
+        if this_day != item[2]
+          issue_data = mod.scrape_issue_data(item[1], item[0], item[3])
+          update_issue_data(issue_data)
+        end
+        # Update title as checked for today
+        SETTINGS[:db].execute('UPDATE MediaTitles set last_checked=? where media_id=?', [this_day, item[0]])
       end
-      # Update title as checked for today
-      SETTINGS[:db].execute('UPDATE MediaTitles set last_checked=? where media_id=?', [this_day, item[0]])
     end
   end
   puts "Updating issue data complete."
@@ -159,7 +156,7 @@ end
 def get_image_data(limit)
     # look up issues
     image_pool = ImageWorker.pool(size: 10)
-    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 and issue_url LIKE ? LIMIT ?', ['%comiconlinefree%', limit.to_i])
+    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 LIMIT ?', [limit.to_i])
     # got issues, iterate and get image data
     data.each do |item|
       # lookup comic title for title and module info.
