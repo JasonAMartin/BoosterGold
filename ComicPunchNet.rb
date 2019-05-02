@@ -30,7 +30,7 @@ module ComicPunchNet
 		i_id = url.match(/(Issue+)(.*\?)/)
     issue_name = i_id.to_s.sub('Issue-', '').sub('?','')
 		puts "Working on images for #{issue_id}"
-		page = HTTParty.get(url.gsub(' ', '%20') + '?q=fullchapter') # this site puts images on pages, but /full url puts them all on 1 page
+		page = HTTParty.get(url.gsub(' ', '%20') + '/?q=fullchapter') # this site puts images on pages, but /full url puts them all on 1 page
 		parse_page = Nokogiri::HTML(page)
 		switch_css = '.picture'
 		parse_page.css(switch_css).each_with_index.map do |link, index|
