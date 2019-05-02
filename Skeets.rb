@@ -75,7 +75,7 @@ class ImageWorker
   def process_page(item)
     puts item[1]
       # puts "Inside ImageWorker: #{item}"
-      title_data = SETTINGS[:db].execute('select module,name from MediaTitles where media_id = ?', [item[1]])
+      title_data = SETTINGS[:db].execute('select module, name from MediaTitles where media_id = ?', [item[1]])
       mod = Kernel.const_get(title_data[0][0].to_s) # TODO: If a module is in DB, but now disabled, this will break!
       this_title = title_data[0][1].to_s
       image_data = mod.scrape_image_data(item[1], item[2], item[0], this_title) # note: Will add title later or remove.

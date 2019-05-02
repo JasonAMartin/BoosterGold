@@ -39,7 +39,7 @@ module ComicPunchNet
       image_updated_url = image_url + "?&&#{title}&&&#{issue_name}&&&&"
 			media_data = Hash.new {|h,k| h[k] = [] }
 				media_data[:source] = BASE_URL
-				media_data[:url] = image_updated_url
+				media_data[:url] = image_updated_url.gsub('mangas/','https://comicpunch.net/reader/mangas/')
 				media_data[:module] = MODULE_CODE
 				media_data[:title_id] = title_id
 				media_data[:issue_id] = issue_id
