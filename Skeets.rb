@@ -57,8 +57,8 @@ end
 # SETTINGS
 
 SETTINGS = {
-  savedirno: '/home/serabyte/Minerva/',
-  savedir: '/home/serabyte/Minerva/',
+  savedirno: '/run/media/serabyte/HORDE1/',
+  savedir: '/run/media/serabyte/HORDE1/',
   comicDirName: 'Comics2',
   mangaDirName: 'Manga',
   scrape_pages: 50,
