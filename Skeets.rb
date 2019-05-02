@@ -59,7 +59,7 @@ end
 SETTINGS = {
   savedirno: '/home/serabyte/Minerva/',
   savedir: '/home/serabyte/Minerva/',
-  comicDirName: 'Comics',
+  comicDirName: 'Comics2',
   mangaDirName: 'Manga',
   scrape_pages: 50,
   max_downloads: 10,
@@ -174,13 +174,14 @@ def update_image_data(data, id)
     # does_exits = SETTINGS[:db].execute('select * from Images where media_id=? and issue_id=? and image_url=?', [item[:title_id], item[:issue_id], item[:url]])
     #if does_exits.empty?
       title = item[:issue_title]
+      puts item
       if title.empty?
         title = "SPECIAL-#{item[:issue_id]}"
       end
 
       # puts "Adding new image for issue id: #{item[:issue_id]} from #{item[:module]}"
-      SETTINGS[:db].execute('INSERT INTO Images (issue_id, media_id, image_url, source, module, issue_title) values (?,?,?,?,?,?)',
-        [item[:issue_id], item[:title_id], item[:url], item[:source], item[:module], title])
+      SETTINGS[:db].execute('INSERT INTO Images (issue_id, media_id, image_url, source, module, issue_title, sequence) values (?,?,?,?,?,?,?)',
+        [item[:issue_id], item[:title_id], item[:url], item[:source], item[:module], title, item[:sequence]])
 
       # puts "Attempting to add issue title of #{title}"
       SETTINGS[:db].execute('UPDATE Issues set issue_title=? where issue_title is null and issue_id=?', [title, item[:issue_id]])
@@ -230,11 +231,11 @@ def download_images(image_count, title, issue)
 
   if image_count.nil?
     # downloading specific issue
-    all_images = SETTINGS[:db].execute("select image_id, issue_id, media_id, image_url from Images where media_id=? and issue_id=?",
+    all_images = SETTINGS[:db].execute("select image_id, issue_id, media_id, image_url, sequence from Images where media_id=? and issue_id=?",
       [title,issue])
   else
     # get em all
-    all_images = SETTINGS[:db].execute("select image_id, issue_id, media_id, image_url from Images where downloaded=0  and issue_title not null LIMIT ?",
+    all_images = SETTINGS[:db].execute("select image_id, issue_id, media_id, image_url, sequence from Images where downloaded=0 and issue_title not null LIMIT ?",
       [image_count])
   end
 
@@ -250,6 +251,7 @@ def download_images(image_count, title, issue)
   all_images.each do |data|
     image_id = data[0]
     image = data[3]
+    sequence = data[4]
     if image.include?('.jpg')
       adjusted_url = image.match(/(http+)(.*jpg)/)
     elsif image.include?('.jpeg')
@@ -298,6 +300,9 @@ def download_images(image_count, title, issue)
               title_directory = folder_data[0][1]
               fileLOC = "#{SETTINGS[:savedir]}#{media_location}/#{title_directory}/#{current_issue}"
               current_image = final_url.match(/[\w:]+\.(jpe?g|png|gif)/).to_s
+              # sequence is order the page had images, so best indicator of true order
+              current_image = current_image + sequence
+
               image_name = "#{this_comic}-#{current_issue}-#{current_image}"
               have_image = File.file?("#{fileLOC}/#{image_name}")
 
@@ -396,12 +401,12 @@ when 'updateissues'
   end
 when 'updateimages'
   if args[1].nil?
-    get_image_data(10)
+    get_image_data(100)
   else
     get_image_data(args[1])
   end
 when 'downloadimages'
-  download_images(100, nil, nil) # TODO: put this back to 1000 or whatever
+  download_images(1 + rand(94), nil, nil) # TODO: put this back to 1000 or whatever
 when 'downloadissue'
   if args[1].nil? || args[2].nil?
     puts "Need to specify comic title and issue number. Example Skeets.rb 31 3"
@@ -428,7 +433,7 @@ else
   puts 'Booster Gold loves you!'
   puts 'Try these commands: updatetitles updateissues updateimages downloadimages downloadissue displayissues lookupmediaid createtitlepage purge stats '
 end
-sleep(875875638268546)
+#sleep(875875638268546)
 # SETTINGS[:db].close
 
 # TODO

@@ -67,7 +67,7 @@ module ComicOnlineFree
 		page = HTTParty.get(url.gsub(' ', '%20') + '/full') # this site puts images on pages, but /full url puts them all on 1 page
 		parse_page = Nokogiri::HTML(page)
 		switch_css = '.chapter_img'
-		parse_page.css(switch_css).map do |link|
+		parse_page.css(switch_css).each_with_index.map do |link, index|
 			image_url = link.attr('src')
 			puts image_url
       image_updated_url = image_url + "?&&#{title}&&&#{issue_name}&&&&"
@@ -78,12 +78,9 @@ module ComicOnlineFree
 				media_data[:title_id] = title_id
 				media_data[:issue_id] = issue_id
 				media_data[:issue_title] = issue_name
+				media_data[:sequence] = index
 				media_list.push(media_data)
     end
 		return media_list
 	end
-
-
-
-
 end
