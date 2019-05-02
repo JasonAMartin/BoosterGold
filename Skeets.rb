@@ -301,7 +301,7 @@ def download_images(image_count, title, issue)
               fileLOC = "#{SETTINGS[:savedir]}#{media_location}/#{title_directory}/#{current_issue}"
               current_image = final_url.match(/[\w:]+\.(jpe?g|png|gif)/).to_s
               # sequence is order the page had images, so best indicator of true order
-              current_image = current_image + sequence
+              current_image = current_image + sequence.to_s
 
               image_name = "#{this_comic}-#{current_issue}-#{current_image}"
               have_image = File.file?("#{fileLOC}/#{image_name}")
