@@ -363,7 +363,7 @@ def file_count(directory)
 end
 
 def createFolderKey(title)
-  new_title = title.gsub(' ','').gsub('-','').gsub('(', '').gsub(')','').gsub(':','').gsub(';','').downcase
+  new_title = title.gsub(' ','').gsub('-','').gsub('(', '').gsub(')','').gsub(':','').gsub(';','').gsub('/','-').gsub('https','').gsub('http','').downcase
   return new_title
 end
 
