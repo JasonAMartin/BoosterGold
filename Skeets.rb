@@ -59,7 +59,7 @@ end
 SETTINGS = {
   savedirno: '/run/media/serabyte/HORDE1/',
   savedir: '/run/media/serabyte/HORDE1/',
-  comicDirName: 'Comics2',
+  comicDirName: 'Comics',
   mangaDirName: 'Manga',
   scrape_pages: 50,
   max_downloads: 10,
