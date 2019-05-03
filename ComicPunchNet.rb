@@ -20,9 +20,27 @@ module ComicPunchNet
 		return true
 	end
 
+
 	def self.scrape_issue_data(title, id, url)
-			# using this site for feeder, so all titles/issues will be manually entered
-			return true
+		media_list = []
+		puts "Trying to get issues for: #{title}"
+		page = HTTParty.get(url)
+		parse_page = Nokogiri::HTML(page)
+		# grab all issue links
+		switch_css = '.chapter a'
+		parse_page.css(switch_css).map do |link|
+    		issue_link = link.attr('href')
+				current_url = issue_link
+				link_title = link.text
+    		media_data = Hash.new {|h,k| h[k] = [] }
+	        media_data[:source] = BASE_URL
+	        media_data[:url] = current_url
+	        media_data[:module] = MODULE_CODE
+	        media_data[:id] = id
+	        media_data[:title] = link_title
+	        media_list.push(media_data)
+		end
+		return media_list
 	end
 
 	def self.scrape_image_data(title_id, url, issue_id, title)
