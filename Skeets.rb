@@ -40,6 +40,7 @@ require 'typhoeus' #
 require 'fileutils'
 require 'celluloid/current'
 require "selenium-webdriver"
+require_relative "./CommandLine"
 
 # Load custom modules
 CUSTOM_MODS = []
@@ -122,22 +123,21 @@ def update_title_data(data)
   end
 end
 
-def get_issue_data(limit)
+def get_issue_data(options)
+  limit = options[:quantity].to_i
   this_day = Time.now.strftime('%d/%m/%Y')
   CUSTOM_MODS.each do |m|
     mod = Kernel.const_get(m)
-    if not mod.is_feeder
-      puts "Updating for module: #{mod}"
-      # look up titles
-      data = SETTINGS[:db].execute('select media_id, name, last_checked, title_url from MediaTitles where module=? and (is_disabled<>? and (last_checked<>? or last_checked is null)) LIMIT ?', [m, '1', this_day, limit])
-      data.each do |item|
-        if this_day != item[2]
-          issue_data = mod.scrape_issue_data(item[1], item[0], item[3])
-          update_issue_data(issue_data)
-        end
-        # Update title as checked for today
-        SETTINGS[:db].execute('UPDATE MediaTitles set last_checked=? where media_id=?', [this_day, item[0]])
+    puts "Updating for module: #{mod}"
+    # look up titles
+    data = SETTINGS[:db].execute('select media_id, name, last_checked, title_url from MediaTitles where module=? and (is_disabled<>? and (last_checked<>? or last_checked is null)) LIMIT ?', [m, '1', this_day, limit])
+    data.each do |item|
+      if this_day != item[2]
+        issue_data = mod.scrape_issue_data(item[1], item[0], item[3])
+        update_issue_data(issue_data)
       end
+      # Update title as checked for today
+      SETTINGS[:db].execute('UPDATE MediaTitles set last_checked=? where media_id=?', [this_day, item[0]])
     end
   end
   puts "Updating issue data complete."
@@ -154,15 +154,16 @@ def update_issue_data(data)
   end
 end
 
-def get_image_data(limit)
-    # look up issues
-    image_pool = ImageWorker.pool(size: 10)
-    data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 LIMIT ?', [limit.to_i])
-    # got issues, iterate and get image data
-    data.each do |item|
-      # lookup comic title for title and module info.
-      image_pool.future(:process_page, item)
-    end
+def get_image_data(options)
+  limit = options[:quantity].to_i
+  # look up issues
+  image_pool = ImageWorker.pool(size: 10)
+  data = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0 LIMIT ?', [limit.to_i])
+  # got issues, iterate and get image data
+  data.each do |item|
+    # lookup comic title for title and module info.
+    image_pool.future(:process_page, item)
+  end
 end
 
 def update_image_data(data, id)
@@ -188,11 +189,12 @@ def update_image_data(data, id)
   puts "#{id} has completed method at #{Time.now.strftime('%d/%m/%Y - %H:%M:%S')}"
 end
 
-def lookup_media_id(title)
-  titles = SETTINGS[:db].execute('select name, media_id from MediaTitles where name LIKE ?', ["%#{title}%"])
+def lookup_media_id(options)
+  title = options[:name]
+  titles = SETTINGS[:db].execute('select name, media_id, module from MediaTitles where name LIKE ?', ["%#{title}%"])
   puts "Results for #{title}:"
   titles.each do |title|
-    puts "#{title[0]}    || media_id: #{title[1]}"
+    puts "#{title[0]}    || media_id: #{title[1]} (#{title[2]})"
   end
 end
 
@@ -211,7 +213,11 @@ def display_issues(args)
     end
 end
 
-def download_images(image_count, title, issue)
+def download_images(options)
+  # TODO: since I'm downloading ALL images, title/issue is nil. Fix this so I can specify what to download. Maybe by media_id?
+  image_count = options[:quantity].to_i
+  title = nil
+  issue = nil
   # TODO: This method needs a good bit of clean up.
   # test 1: 1k, 20 threads. 4ish min.
   # test 2: 1k images, 50 threads. 3 minutes.
@@ -363,10 +369,21 @@ def create_title_page
   end
 end
 
-def add_media_title(title, source, title_url, module_name, media_type)
+def add_media_title(options)
+  title = options[:title]
+  source = options[:source]
+  title_url = options[:url]
+  module_name = options[:module]
+  media_type = options[:type]
+  disabled = options[:disabled]
+
   folder_key = Core.createFolderKey(title)
-  SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key, "update") values (?,?,?,?,?,?,?)',
-  [title, source, title_url, module_name, media_type, folder_key, 0])
+  SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key, "update", disabled) values (?,?,?,?,?,?,?)',
+  [title, source, title_url, module_name, media_type, folder_key, 0, disabled])
+  has_key = SETTINGS[:db].execute('select folder_key from FolderKeys where folder_key=?', [folder_key])
+  if has_key.empty?
+    SETTINGS[:db].execute('INSERT INTO FolderKeys (folder_key, pretty_name) values (?,?)', [folder_key, title])
+  end
 end
 
 def createKeys
@@ -382,66 +399,49 @@ def createKeys
   end
 end
 
-# MAIN
-args = ARGV # this gets args from command line in array
+# COMMAND LINE ARGS
 
-# SYSTEM
+options = CommandLine.parse(ARGV)
+puts options
 
-case args[0]
-when 'updatetitles'
-  get_title_data(args)
-when 'updateissues'
-  if args[1].nil?
-    get_issue_data(10)
-  else
-    get_issue_data(args[1])
-  end
-when 'updateimages'
-  if args[1].nil?
-    get_image_data(100)
-  else
-    get_image_data(args[1])
-  end
-when 'downloadimages'
-  #download_images(1, nil, nil)
-  download_images(1 + rand(455), nil, nil) # TODO: put this back to 1000 or whatever
-when 'downloadissue'
-  if args[1].nil? || args[2].nil?
-    puts "Need to specify comic title and issue number. Example Skeets.rb 31 3"
-  else
-    download_images(nil, args[1], args[2])
-  end
-when 'purge'
-  purge_directories
-when 'stats'
-  Stats.display_stats
-when 'displayissues'
-  if args[1].nil?
-    puts "You need to specify a title to search for."
-  else
-    display_issues(args)
-  end
-when 'lookupmediaid'
-  lookup_media_id(args[1])
-when 'createtitlepage'
-  create_title_page
-when 'createkeys'
-  createKeys
-when 'addmediatitle'
-  # args[1] = name
-  # args[2] = source domain
-  # args[3] = url
-  # args[4] = module
-  # args[5] = type
-  add_media_title(args[1], args[2], args[3], args[4], args[5])
-when 'scrubfiles'
-  Tools.scrub_file_extensions('/home/serabyte/temp/')
-else
-  puts 'Booster Gold loves you!'
-  puts 'Try these commands: updatetitles updateissues updateimages downloadimages downloadissue displayissues lookupmediaid createtitlepage purge stats '
-  puts 'Need to add a title manually? Try this:'
-  puts 'ruby Skeets.rb addmediatitle The-Killing-Joke-2 http://no2.com http://no2.com/issue/ ComicPunchNet comic'
-end
+# COMMANDS
+
+get_title_data(options) if options[:command] == 'updatetitles'
+get_issue_data(options) if options[:command] == 'updateissues'
+get_image_data(options) if options[:command] == 'updateimages'
+download_images(options) if options[:command] == 'downloadimages'
+add_media_title(options) if options[:command] == 'addmediatitle'
+purge_directories(options) if options[:command] == 'purge'
+create_title_page(options) if options[:command] == 'createtitlepage'
+createKeys(options) if options[:command] == 'createkeys'
+Stats.display_stats if options[:command] == 'stats'
+lookup_media_id(options) if options[:command] == 'lookupmediaid'
+
+
+# TODO: work on these
+# case args[0]
+# when 'downloadissue'
+#   if args[1].nil? || args[2].nil?
+#     puts "Need to specify comic title and issue number. Example Skeets.rb 31 3"
+#   else
+#     download_images(nil, args[1], args[2])
+#   end
+# when 'displayissues'
+#   if args[1].nil?
+#     puts "You need to specify a title to search for."
+#   else
+#     display_issues(args)
+#   end
+# when 'lookupmediaid'
+#   lookup_media_id(args[1])
+# when 'scrubfiles'
+#   Tools.scrub_file_extensions('/home/serabyte/temp/')
+# else
+#   puts 'Booster Gold loves you!'
+#   puts 'Try these commands: updatetitles updateissues updateimages downloadimages downloadissue displayissues lookupmediaid createtitlepage purge stats '
+#   puts 'Need to add a title manually? Try this:'
+#   puts 'ruby Skeets.rb addmediatitle The-Killing-Joke-2 http://no2.com http://no2.com/issue/ ComicPunchNet comic'
+# end
 #sleep(875875638268546)
 # SETTINGS[:db].close
 

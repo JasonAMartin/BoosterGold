@@ -11,7 +11,6 @@ module Tools
     files.each do |file|
       rename_file(file, location) if file.downcase.match /\.(jpe?g|png|tiff|pdf|gif)/
     end
-
   end
 
   def self.rename_file(file, location)
