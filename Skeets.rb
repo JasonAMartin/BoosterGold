@@ -243,7 +243,7 @@ def download_images(image_count, title, issue)
   puts "Starting download ..."
   all_images.each do |data|
     image_id = data[0]
-    image = data[3]
+    image = data[3].downcase
     sequence = data[4]
     if image.include?('.jpg')
       adjusted_url = image.match(/(http+)(.*jpg)/)
@@ -294,6 +294,9 @@ def download_images(image_count, title, issue)
               fileLOC = "#{SETTINGS[:savedir]}#{media_location}/#{title_directory}/#{current_issue}"
               current_image = final_url.match(/[\w:]+\.(jpe?g|png|gif)/).to_s
               # sequence is order the page had images, so best indicator of true order
+              image_number = sequence.to_s
+
+              current_image = current_image.gsub('.jpg', image_number + '.jpg').gsub('.jpeg', image_number + '.jpeg').gsub('.png', image_number + '.png').gsub('.gif', image_number + '.gif')
               current_image = current_image + sequence.to_s
 
               image_name = "#{this_comic}-#{current_issue}-#{current_image}"
