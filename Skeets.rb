@@ -367,6 +367,12 @@ def createFolderKey(title)
   return new_title
 end
 
+def add_media_title(title, source, title_url, module_name, media_type)
+  folder_key = createFolderKey(title)
+  SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key, "update") values (?,?,?,?,?,?,?)',
+  [title, source, title_url, module_name, media_type, folder_key, 0])
+end
+
 def createKeys
    titles = SETTINGS[:db].execute('select name, media_id, folder_key from MediaTitles')
    titles.each do |title|
@@ -426,9 +432,18 @@ when 'createtitlepage'
   create_title_page
 when 'createkeys'
   createKeys
+when 'addmediatitle'
+  # args[1] = name
+  # args[2] = source domain
+  # args[3] = url
+  # args[4] = module
+  # args[5] = type
+  add_media_title(args[1], args[2], args[3], args[4], args[5])
 else
   puts 'Booster Gold loves you!'
   puts 'Try these commands: updatetitles updateissues updateimages downloadimages downloadissue displayissues lookupmediaid createtitlepage purge stats '
+  puts 'Need to add a title manually? Try this:'
+  puts 'ruby Skeets.rb addmediatitle The-Killing-Joke-2 http://no2.com http://no2.com/issue/ ComicPunchNet comic'
 end
 #sleep(875875638268546)
 # SETTINGS[:db].close
