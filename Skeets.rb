@@ -243,9 +243,15 @@ def download_images(image_count, title, issue)
   end
   puts "Starting download ..."
   all_images.each do |data|
+    puts "IMAGE: #{data}"
     image_id = data[0]
-    image = data[3].downcase
+    puts "ii: #{image_id}"
+    image = data[3]
+        puts "img: #{image}"
+
     sequence = data[4]
+        puts "seq: #{sequence}"
+
     if image.include?('.jpg')
       adjusted_url = image.match(/(http+)(.*jpg)/)
     elsif image.include?('.jpeg')
@@ -288,7 +294,6 @@ def download_images(image_count, title, issue)
 
         current_issue = i_title[0][0].to_s
         final_url = adjusted_url.to_s
-        final_url = final_url.gsub(' ', '%20')
           if !final_url.empty?
               # check to see if the directory and file for the image is there.
               folder_data = SETTINGS[:db].execute('select folder_key, pretty_name from FolderKeys where folder_key=?', [this_comic])
@@ -299,14 +304,13 @@ def download_images(image_count, title, issue)
               image_number = sequence.to_s
 
               current_image = current_image.gsub('.jpg', image_number + '.jpg').gsub('.jpeg', image_number + '.jpeg').gsub('.png', image_number + '.png').gsub('.gif', image_number + '.gif')
-              current_image = current_image + sequence.to_s
 
               image_name = "#{this_comic}-#{current_issue}-#{current_image}"
               have_image = File.file?("#{fileLOC}/#{image_name}")
 
               if !have_image
                 # The directory and file for the image isn't there, so add to request
-                request = Typhoeus::Request.new Core.trim_string(final_url)
+                request = Typhoeus::Request.new final_url
                 request.on_complete do |response|
                     puts "response received: #{final_url}."
                     current_image = "404"
@@ -399,7 +403,8 @@ when 'updateimages'
     get_image_data(args[1])
   end
 when 'downloadimages'
-  download_images(1 + rand(94), nil, nil) # TODO: put this back to 1000 or whatever
+  #download_images(1, nil, nil)
+  download_images(1 + rand(455), nil, nil) # TODO: put this back to 1000 or whatever
 when 'downloadissue'
   if args[1].nil? || args[2].nil?
     puts "Need to specify comic title and issue number. Example Skeets.rb 31 3"
