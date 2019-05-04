@@ -26,7 +26,7 @@ class CommandLine
       end
 
       opts.on("-quantity=s", "--quantity", "quantity") do |v|
-        options[:command] = v
+        options[:quantity] = v
       end
 
       opts.on("-name=s", "--name", "The-Killing-Joke") do |v|
