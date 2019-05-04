@@ -45,6 +45,7 @@ require "selenium-webdriver"
 CUSTOM_MODS = []
 $LOAD_PATH << '.'
 require_relative './Modules/Core'
+require_relative './Modules/Tools'
 require 'Stats'
 mod_array = ['ComicOnlineFree', 'ComicPunchNet']
 # mod_array = ['ComicCastle', 'ReadComicOnline', 'ReadComics']
