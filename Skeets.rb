@@ -288,6 +288,7 @@ def download_images(image_count, title, issue)
 
         current_issue = i_title[0][0].to_s
         final_url = adjusted_url.to_s
+        final_url = final_url.gsub(' ', '%20')
           if !final_url.empty?
               # check to see if the directory and file for the image is there.
               folder_data = SETTINGS[:db].execute('select folder_key, pretty_name from FolderKeys where folder_key=?', [this_comic])
