@@ -11,7 +11,7 @@ module ComicPunchNet
 		puts "Hello, mod #{MODULE_CODE} worked"
 	end
 
-	def is_feeder
+	def self.is_feeder
 		return true
 	end
 

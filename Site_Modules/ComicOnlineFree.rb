@@ -8,6 +8,10 @@ module ComicOnlineFree
 		puts "Hello, mod #{MODULE_CODE} worked"
 	end
 
+	def self.is_feeder
+		return false
+	end
+
 	def self.scrape_title_data(limit=20)
 		# TODO: Make this function read how many pages there are. Right now, it just blindly does 50 pages.
 		current_page = 1
