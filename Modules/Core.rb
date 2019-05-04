@@ -10,12 +10,12 @@ module Core
   		return str.tr(' ', '')
 	end
 
-	def createFolderKey(title)
+	def self.createFolderKey(title)
 		new_title = title.gsub(' ','').gsub('-','').gsub('(', '').gsub(')','').gsub(':','').gsub(';','').gsub('/','-').gsub('https','').gsub('http','').downcase
 		return new_title
 	end
 
-	def file_count(directory)
+	def self.file_count(directory)
 		return Dir[directory].length
 	end
 

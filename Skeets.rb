@@ -428,6 +428,8 @@ when 'addmediatitle'
   # args[4] = module
   # args[5] = type
   add_media_title(args[1], args[2], args[3], args[4], args[5])
+when 'scrubfiles'
+  Tools.scrub_file_extensions('/home/serabyte/temp/')
 else
   puts 'Booster Gold loves you!'
   puts 'Try these commands: updatetitles updateissues updateimages downloadimages downloadissue displayissues lookupmediaid createtitlepage purge stats '
