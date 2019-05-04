@@ -216,6 +216,7 @@ end
 def download_images(options)
   # TODO: since I'm downloading ALL images, title/issue is nil. Fix this so I can specify what to download. Maybe by media_id?
   image_count = options[:quantity].to_i
+  puts "ic: #{image_count}"
   title = nil
   issue = nil
   # TODO: This method needs a good bit of clean up.
@@ -318,7 +319,9 @@ def download_images(options)
                 # The directory and file for the image isn't there, so add to request
                 request = Typhoeus::Request.new final_url
                 request.on_complete do |response|
-                    puts "response received: #{final_url}."
+                    puts "response received: (CODE: #{response.response_code}) #{final_url}."
+                    #puts "headers: #{response.response_headers}"
+                    puts "redirections: #{response.redirections}"
                     current_image = "404"
                     # 2. check if comic + issue folder exists. If not, make it.
                     FileUtils::mkdir_p "#{SETTINGS[:savedir]}#{media_location}/#{title_directory}/#{current_issue}"
@@ -370,16 +373,17 @@ def create_title_page
 end
 
 def add_media_title(options)
-  title = options[:title]
+  title = options[:name]
   source = options[:source]
   title_url = options[:url]
   module_name = options[:module]
   media_type = options[:type]
   disabled = options[:disabled]
+  update = options[:update].to_i
 
   folder_key = Core.createFolderKey(title)
-  SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key, "update", disabled) values (?,?,?,?,?,?,?)',
-  [title, source, title_url, module_name, media_type, folder_key, 0, disabled])
+  SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key, "update", is_disabled) values (?,?,?,?,?,?,?,?)',
+  [title, source, title_url, module_name, media_type, folder_key, update, disabled])
   has_key = SETTINGS[:db].execute('select folder_key from FolderKeys where folder_key=?', [folder_key])
   if has_key.empty?
     SETTINGS[:db].execute('INSERT INTO FolderKeys (folder_key, pretty_name) values (?,?)', [folder_key, title])

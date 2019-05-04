@@ -29,6 +29,11 @@ class CommandLine
         options[:quantity] = v
       end
 
+      options[:update] = 1
+      opts.on("-update=s", "--update", "update") do |v|
+        options[:update] = 0
+      end
+
       opts.on("-name=s", "--name", "The-Killing-Joke") do |v|
         options[:name] = v
       end
