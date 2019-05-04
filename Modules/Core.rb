@@ -10,6 +10,15 @@ module Core
   		return str.tr(' ', '')
 	end
 
+	def createFolderKey(title)
+		new_title = title.gsub(' ','').gsub('-','').gsub('(', '').gsub(')','').gsub(':','').gsub(';','').gsub('/','-').gsub('https','').gsub('http','').downcase
+		return new_title
+	end
+
+	def file_count(directory)
+		return Dir[directory].length
+	end
+
 	def self.get_url(url, referer)
 		return HTTParty.get(url,
 							headers: {

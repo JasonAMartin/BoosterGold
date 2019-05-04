@@ -44,12 +44,12 @@ require "selenium-webdriver"
 # Load custom modules
 CUSTOM_MODS = []
 $LOAD_PATH << '.'
-require 'Core'
+require_relative './Modules/Core'
 require 'Stats'
 mod_array = ['ComicOnlineFree', 'ComicPunchNet']
 # mod_array = ['ComicCastle', 'ReadComicOnline', 'ReadComics']
 mod_array.each do |mod|
-  require mod
+  require_relative './Site_Modules/' + mod
   CUSTOM_MODS.push(mod)
 end
 # End load custom modules
@@ -109,7 +109,7 @@ def update_title_data(data)
     does_exits = SETTINGS[:db].execute('select * from MediaTitles where name=? and module=? and media_type=?', [item[:title], item[:module], item[:medium]])
     if does_exits.empty?
       puts "Adding new item: #{item[:title]} from #{item[:module]}"
-      folder_key = createFolderKey(item[:title])
+      folder_key = Core.createFolderKey(item[:title])
       SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key) values (?,?,?,?,?,?)',
         [item[:title], item[:source], item[:url], item[:module], item[:medium], folder_key])
       # check if folder_key exists in FolderKeys table. If not, add it.
@@ -187,9 +187,6 @@ def update_image_data(data, id)
   puts "#{id} has completed method at #{Time.now.strftime('%d/%m/%Y - %H:%M:%S')}"
 end
 
-
-# ENDING NEW MODULE CODE
-
 def lookup_media_id(title)
   titles = SETTINGS[:db].execute('select name, media_id from MediaTitles where name LIKE ?', ["%#{title}%"])
   puts "Results for #{title}:"
@@ -212,7 +209,6 @@ def display_issues(args)
       puts "#{title[0]}  || issue id: #{title[2]}"
     end
 end
-
 
 def download_images(image_count, title, issue)
   # TODO: This method needs a good bit of clean up.
@@ -358,17 +354,8 @@ def create_title_page
   end
 end
 
-def file_count(directory)
-  return Dir[directory].length
-end
-
-def createFolderKey(title)
-  new_title = title.gsub(' ','').gsub('-','').gsub('(', '').gsub(')','').gsub(':','').gsub(';','').gsub('/','-').gsub('https','').gsub('http','').downcase
-  return new_title
-end
-
 def add_media_title(title, source, title_url, module_name, media_type)
-  folder_key = createFolderKey(title)
+  folder_key = Core.createFolderKey(title)
   SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key, "update") values (?,?,?,?,?,?,?)',
   [title, source, title_url, module_name, media_type, folder_key, 0])
 end
@@ -385,8 +372,6 @@ def createKeys
     end
   end
 end
-
-
 
 # MAIN
 args = ARGV # this gets args from command line in array
