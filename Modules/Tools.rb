@@ -6,13 +6,30 @@ module Tools
 		puts "Tools is activated."
   end
 
+  def self.is_valid_file(file_type)
+    extensions = ['image/jpg', 'image/jpeg', 'image/gif', '/pdf', 'image/tiff', 'image/png']
+    valid = false
+    extensions.each do |extension|
+      if file_type.include? extension
+        valid = true
+      end
+    end
+    return valid
+  end
+
   def self.scrub_file_extensions(location)
-    # Go into the media area and find all files without extensions
-    #extensions = ['.jpg', '.jpeg', '.gif', '.pdf', '.tiff', '.png']
+    # get all files
     Dir.chdir(location)
     files = Dir.glob("**/*")
     files.each do |file|
-      puts "#{location}#{file}"
+      fm = FileMagic.new(FileMagic::MAGIC_MIME)
+      mime_type = fm.file(file)
+      if (self.is_valid_file(mime_type))
+        full_file = location + file
+        current_file_extension = File.extname(full_file)
+        file_extension = MIME::Types[mime_type][0].extensions[0]
+        File.rename(full_file, full_file + '.' + file_extension) if (file_extension != current_file_extension)
+      end
       #self.get_mime_type(location + file)
       #rename_file(file, location) if file.downcase.match /\.(jpe?g|png|tiff|pdf|gif)/
     end

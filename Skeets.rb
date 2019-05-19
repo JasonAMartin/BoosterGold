@@ -431,7 +431,7 @@ create_title_page(options) if options[:command] == 'createtitlepage'
 createKeys(options) if options[:command] == 'createkeys'
 Stats.display_stats if options[:command] == 'stats'
 lookup_media_id(options) if options[:command] == 'lookupmediaid'
-Tools.scrub_file_extensions(savedir + comicDirName + '/24/') if options[:command] == 'fiximages'
+Tools.scrub_file_extensions(SETTINGS[:savedir] + SETTINGS[:comicDirName] + '/') if options[:command] == 'fiximages'
 
 # LOG ACTION
 File.open('update_log.txt', 'a') do |f|
