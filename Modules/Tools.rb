@@ -53,4 +53,32 @@ module Tools
     file_extension = MIME::Types[mime_type][0].extensions[0]
     File.rename(file, file + '.' + file_extension) if (file_extension != current_file_extension)
   end
+
+  def self.fix_broken_images(location)
+    bash_command = `find #{location} -type f -size -10k`
+    broken_images = bash_command.split(/\n/)
+    broken_images.each do |image|
+      self.find_image(File.basename(image), image)
+    end
+  end
+
+  def self.find_image(image_name, filesystem_image)
+      image_data = image_name.split(/[-|.]/).select { |item| (!item.match? /(jpg|png|pdf|tiff|jpeg|gif|SPECIAL)/i )}
+      broken_image = SETTINGS[:db].execute('select image_id, image_url, issue_id from Images where issue_id = ? and image_url LIKE ?', [image_data[1], "%#{image_data[2]}%"])
+      if broken_image.length == 1
+        # get issue data
+        issue_data = SETTINGS[:db].execute('select issue_id, issue_url from Issues where issue_id = ?', [broken_image[0][2]])
+
+        if issue_data.length == 1
+          # Image and Issue found, so delete image from filesystem, change downloaded to 2 in Images and change is_disabled to 1 in Issues.
+          # Report issue
+          SETTINGS[:db].execute('UPDATE Images set downloaded = 2 where image_id = ?', [broken_image[0][0]])
+          SETTINGS[:db].execute('UPDATE Issues set is_disabled = 1, date_disabled = ? where issue_id = ?', [Date.today.to_s, broken_image[0][2]])
+          puts "File found. Deleting: #{broken_image}"
+          File.exist?(filesystem_image) ? File.delete(filesystem_image) : ''
+        end
+        # broken image found
+#              puts "#{image_data} -- #{broken_image[0][0]}"
+      end
+  end
 end

@@ -19,4 +19,13 @@ module Stats
 	  puts ""
 	  puts "*** end of report ***"
 	end
+
+	def self.display_disabled_issues
+			disabled_issues = SETTINGS[:db].execute("select issue_url, is_disabled, replacement_found from Issues where is_disabled=1 and (replacement_found is null or replacement_found = 0)")
+			puts "DISABLED: #{disabled_issues.length}"
+			disabled_issues.each do |issue|
+				puts issue[0]
+			end
+			puts "DISABLED: #{disabled_issues.length}"
+	end
 end

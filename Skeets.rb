@@ -47,7 +47,7 @@ CUSTOM_MODS = []
 $LOAD_PATH << '.'
 require_relative './Modules/Core'
 require_relative './Modules/Tools'
-require 'Stats'
+require_relative './Modules/Stats'
 mod_array = ['ComicOnlineFree', 'ComicPunchNet']
 # mod_array = ['ComicCastle', 'ReadComicOnline', 'ReadComics']
 mod_array.each do |mod|
@@ -61,6 +61,7 @@ end
 SETTINGS = {
   savedirno: '/media/boostergold/HORDE1/',
   savedir: '/media/boostergold/HORDE1/',
+  logdir: '/media/boostergold/HORDE1/',
   comicDirName: 'Comics',
   mangaDirName: 'Manga',
   scrape_pages: 50,
@@ -117,8 +118,8 @@ def update_title_data(data)
       puts "Adding new item: #{item[:title]} from #{item[:module]}"
       $update_log.push("Adding new item: #{item[:title]} from #{item[:module]}")
       folder_key = Core.createFolderKey(item[:title])
-      SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key) values (?,?,?,?,?,?)',
-        [item[:title], item[:source], item[:url], item[:module], item[:medium], folder_key])
+      SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key, date_added) values (?,?,?,?,?,?,?)',
+        [item[:title], item[:source], item[:url], item[:module], item[:medium], folder_key, Date.today.to_s])
       # check if folder_key exists in FolderKeys table. If not, add it.
       has_key = SETTINGS[:db].execute('select folder_key from FolderKeys where folder_key=?', [folder_key])
       if has_key.empty?
@@ -155,7 +156,7 @@ def update_issue_data(data)
     if does_exits.empty?
       puts "Adding new issue: #{item[:title]} from #{item[:module]}"
       $update_log.push("Adding new issue: #{item[:title]} from #{item[:module]}")
-      SETTINGS[:db].execute('INSERT INTO Issues (media_id, issue_url) values (?,?)', [item[:id], item[:url]])
+      SETTINGS[:db].execute('INSERT INTO Issues (media_id, issue_url, date_added) values (?,?,?)', [item[:id], item[:url], Date.today.to_s])
     end
   end
 end
@@ -185,8 +186,8 @@ def update_image_data(data, id)
       end
 
       # puts "Adding new image for issue id: #{item[:issue_id]} from #{item[:module]}"
-      SETTINGS[:db].execute('INSERT INTO Images (issue_id, media_id, image_url, source, module, issue_title, sequence) values (?,?,?,?,?,?,?)',
-        [item[:issue_id], item[:title_id], item[:url], item[:source], item[:module], title, item[:sequence]])
+      SETTINGS[:db].execute('INSERT INTO Images (issue_id, media_id, image_url, source, module, issue_title, sequence, date_added) values (?,?,?,?,?,?,?,?)',
+        [item[:issue_id], item[:title_id], item[:url], item[:source], item[:module], title, item[:sequence], Date.today.to_s])
 
       # puts "Attempting to add issue title of #{title}"
       SETTINGS[:db].execute('UPDATE Issues set issue_title=? where issue_title is null and issue_id=?', [title, item[:issue_id]])
@@ -432,11 +433,13 @@ purge_directories(options) if options[:command] == 'purge'
 create_title_page(options) if options[:command] == 'createtitlepage'
 createKeys(options) if options[:command] == 'createkeys'
 Stats.display_stats if options[:command] == 'stats'
+Stats.display_disabled_issues if options[:command] == 'disabledissues'
 lookup_media_id(options) if options[:command] == 'lookupmediaid'
-Tools.scrub_file_extensions(SETTINGS[:savedir] + SETTINGS[:comicDirName] + '/') if options[:command] == 'fiximages'
+Tools.scrub_file_extensions(SETTINGS[:savedir] + SETTINGS[:comicDirName] + '/') if options[:command] == 'fiximageextensions'
+Tools.fix_broken_images(SETTINGS[:savedir] + SETTINGS[:comicDirName]) if options[:command] == 'fixbrokenimages'
 
 # LOG ACTION
-File.open('update_log.txt', 'a') do |f|
+File.open(SETTINGS[:logdir] + 'update_log.txt', 'a') do |f|
   $update_log.each do |string|
     f.puts string
   end
