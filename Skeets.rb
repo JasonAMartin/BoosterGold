@@ -59,8 +59,8 @@ end
 # SETTINGS
 
 SETTINGS = {
-  savedirno: '/run/media/serabyte/HORDE1/',
-  savedir: '/run/media/serabyte/HORDE1/',
+  savedirno: '/media/boostergold/HORDE1/',
+  savedir: '/media/boostergold/HORDE1/',
   comicDirName: 'Comics',
   mangaDirName: 'Manga',
   scrape_pages: 50,
@@ -68,6 +68,10 @@ SETTINGS = {
   minimum_image_threshold: 6,
   db: SQLite3::Database.new('../BoosterGoldDatabase/BoosterGold.db')
 }.freeze
+
+# LOG
+$update_log = []
+
 
 # STARTING NEW MODULE CODE
 
@@ -92,12 +96,12 @@ class ImageWorker
 end
 
 
-def get_title_data(args)
+def get_title_data(options)
   CUSTOM_MODS.each do |m|
     mod = Kernel.const_get(m)
     if not mod.is_feeder
       puts "Updating for module: #{mod}"
-      title_data = mod.scrape_title_data(args[1])
+      title_data = mod.scrape_title_data(options[:quantity])
       update_title_data(title_data)
     end
   end
@@ -111,6 +115,7 @@ def update_title_data(data)
     does_exits = SETTINGS[:db].execute('select * from MediaTitles where name=? and module=? and media_type=?', [item[:title], item[:module], item[:medium]])
     if does_exits.empty?
       puts "Adding new item: #{item[:title]} from #{item[:module]}"
+      $update_log.push("Adding new item: #{item[:title]} from #{item[:module]}")
       folder_key = Core.createFolderKey(item[:title])
       SETTINGS[:db].execute('INSERT INTO MediaTitles (name, source, title_url, module, media_type, folder_key) values (?,?,?,?,?,?)',
         [item[:title], item[:source], item[:url], item[:module], item[:medium], folder_key])
@@ -149,6 +154,7 @@ def update_issue_data(data)
     does_exits = SETTINGS[:db].execute('select * from Issues where media_id=? and issue_url=?', [item[:id], item[:url]])
     if does_exits.empty?
       puts "Adding new issue: #{item[:title]} from #{item[:module]}"
+      $update_log.push("Adding new issue: #{item[:title]} from #{item[:module]}")
       SETTINGS[:db].execute('INSERT INTO Issues (media_id, issue_url) values (?,?)', [item[:id], item[:url]])
     end
   end
@@ -408,6 +414,11 @@ end
 options = CommandLine.parse(ARGV)
 puts options
 
+# LOG USAGE
+$update_log.push('###### CALLED ######')
+$update_log.push(Date.today.to_s)
+$update_log.push("$: #{options}")
+
 # COMMANDS
 
 get_title_data(options) if options[:command] == 'updatetitles'
@@ -420,6 +431,14 @@ create_title_page(options) if options[:command] == 'createtitlepage'
 createKeys(options) if options[:command] == 'createkeys'
 Stats.display_stats if options[:command] == 'stats'
 lookup_media_id(options) if options[:command] == 'lookupmediaid'
+Tools.scrub_file_extensions(savedir + comicDirName + '/24/') if options[:command] == 'fiximages'
+
+# LOG ACTION
+File.open('update_log.txt', 'a') do |f|
+  $update_log.each do |string|
+    f.puts string
+  end
+end
 
 
 # TODO: work on these

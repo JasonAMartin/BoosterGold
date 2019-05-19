@@ -1,0 +1,3 @@
+1. Update DB data_updated when new title or issue is added so I can easily see what's new.
+2. Need to make a cleanup script that finds 10k or under images and reports for replacement.
+3. Need a script that goes through all /Comics and looks at file extension. If it ends with .jpg/png/tiff/pdf/etc, leave. If not, read file type and add extension.
