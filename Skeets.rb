@@ -307,6 +307,7 @@ def download_images(options)
 
         current_issue = i_title[0][0].to_s
         final_url = adjusted_url.to_s
+        puts "Final url: #{final_url}"
           if !final_url.empty?
               # check to see if the directory and file for the image is there.
               folder_data = SETTINGS[:db].execute('select folder_key, pretty_name from FolderKeys where folder_key=?', [this_comic])
@@ -316,14 +317,14 @@ def download_images(options)
               # sequence is order the page had images, so best indicator of true order
               image_number = sequence.to_s
 
-              current_image = current_image.gsub('.jpg', image_number + '.jpg').gsub('.jpeg', image_number + '.jpeg').gsub('.png', image_number + '.png').gsub('.gif', image_number + '.gif')
+              current_image = current_image + '-' + image_number #.gsub('.jpg', image_number + '.jpg').gsub('.jpeg', image_number + '.jpeg').gsub('.png', image_number + '.png').gsub('.gif', image_number + '.gif')
 
               image_name = "#{this_comic}-#{current_issue}-#{current_image}"
               have_image = File.file?("#{fileLOC}/#{image_name}")
 
               if !have_image
                 # The directory and file for the image isn't there, so add to request
-                request = Typhoeus::Request.new final_url
+                request = Typhoeus::Request.new final_url.gsub(' ','%20')
                 request.on_complete do |response|
                     puts "response received: (CODE: #{response.response_code}) #{final_url}."
                     #puts "headers: #{response.response_headers}"
@@ -334,13 +335,14 @@ def download_images(options)
                     # 3. get the image and save into the directory.
                     File.write("#{SETTINGS[:savedir]}#{media_location}/#{title_directory}/#{current_issue}/#{image_name}", response.body)
                     # puts "Image: #{image_name} :::: Downloading: #{adjusted_url}"
-                    SETTINGS[:db].execute("UPDATE Images set downloaded=1, issue_title=? where image_id = ?", [current_issue, image_id])
+                    SETTINGS[:db].execute("UPDATE Images set downloaded=1, issue_title=?, response=? where image_id = ?", [current_issue, response.response_code, image_id])
                 end
                 hydra.queue request
               else
-                SETTINGS[:db].execute("UPDATE Images set downloaded=1, issue_title=? where image_id = ?", [current_issue, image_id])
+                SETTINGS[:db].execute("UPDATE Images set downloaded=1, issue_title=?, response=? where image_id = ?", [current_issue, 999, image_id])
               end
           else
+            puts "CORRUPT"
               # corrupt or missing image url. For now, I'm just updating as done.
               SETTINGS[:db].execute("UPDATE Images set downloaded=1, issue_title=? where image_id = ?", [current_issue, image_id])
           end #request on complete

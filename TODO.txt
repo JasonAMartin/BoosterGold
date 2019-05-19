@@ -1,5 +1,6 @@
 1. Update DB data_updated when new title or issue is added so I can easily see what's new.
 2. Need to make a cleanup script that finds 10k or under images and reports for replacement.
+3. Now that I have image response code, I need a way to re-try downloads.
 
 BUGS:
 1. fix update_log.txt location. When I CD (like fixing files, update_log ends up in other dirs)

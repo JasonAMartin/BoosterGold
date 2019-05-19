@@ -5,6 +5,7 @@ module Stats
 		pending_issues = SETTINGS[:db].execute('select issue_id, media_id, issue_url from Issues where checked=0')
 		pending_images = SETTINGS[:db].execute("select image_id, issue_title, downloaded from Images where downloaded=0 and issue_title not null")
 		total_images = SETTINGS[:db].execute("select image_id, issue_title, downloaded from Images where downloaded=1 and issue_title not null")
+		broken_images = SETTINGS[:db].execute("select response from Images where response=400")
 
 	  issues = SETTINGS[:db].execute('select * from Issues')
 	  puts "~~~~~~~ STATS ~~~~~~~"
@@ -14,6 +15,7 @@ module Stats
 		puts "Pending Issues: #{pending_issues.length}"
 		puts "Pending Images: #{pending_images.length}"
 		puts "Total Images Downloaded: #{total_images.length}"
+		puts "Broken Images: #{broken_images.length}"
 	  puts ""
 	  puts "*** end of report ***"
 	end
