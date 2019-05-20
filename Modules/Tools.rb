@@ -63,10 +63,13 @@ module Tools
   end
 
   def self.find_image(image_name, filesystem_image)
+      puts "PROCESSNG: #{filesystem_image}"
       image_data = image_name.split(/[-|.]/).select { |item| (!item.match? /(jpg|png|pdf|tiff|jpeg|gif|SPECIAL)/i )}
+      puts "--- #{image_data}"
       broken_image = SETTINGS[:db].execute('select image_id, image_url, issue_id from Images where issue_id = ? and image_url LIKE ?', [image_data[1], "%#{image_data[2]}%"])
       if broken_image.length == 1
         # get issue data
+        puts "Image found: #{broken_image[0][2]}"
         issue_data = SETTINGS[:db].execute('select issue_id, issue_url from Issues where issue_id = ?', [broken_image[0][2]])
 
         if issue_data.length == 1
@@ -76,9 +79,15 @@ module Tools
           SETTINGS[:db].execute('UPDATE Issues set is_disabled = 1, date_disabled = ? where issue_id = ?', [Date.today.to_s, broken_image[0][2]])
           puts "File found. Deleting: #{broken_image}"
           File.exist?(filesystem_image) ? File.delete(filesystem_image) : ''
+        else
+          puts "Issue Not Found - #{broken_image[0][2]}"
         end
         # broken image found
 #              puts "#{image_data} -- #{broken_image[0][0]}"
+      else
+        SETTINGS[:db].execute('INSERT INTO BadImages (past_location, folder_key, issue_id, date_added) values (?,?,?,?)',
+            [filesystem_image, image_data[0], image_data[1], Date.today.to_s])
+        File.exist?(filesystem_image) ? File.delete(filesystem_image) : ''
       end
   end
 end
