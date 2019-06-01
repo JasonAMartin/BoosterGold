@@ -10,3 +10,6 @@ WHEN DB IS BROKEN (READ ONLY):
 2. mv this.db this.db.original
 3. sqlite3 this.db < my_data.sql
 4. sqlite this.db analyze
+
+DELETE EMPTY DIRS
+find . -type d -empty -delete
